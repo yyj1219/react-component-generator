@@ -43,6 +43,7 @@ export function PromptInput({ onGenerate, isLoading }: PromptInputProps) {
             }
           }}
         />
+        <div className="char-counter">{prompt.length} 글자</div>
         <button
           type="submit"
           className="btn-generate"

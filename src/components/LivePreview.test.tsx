@@ -3,6 +3,8 @@ import { render } from '@testing-library/react';
 import { LivePreview } from './LivePreview';
 
 const mockCode = 'render(<div>Test Component</div>)';
+const emptyCode = '';
+const codeWithoutRender = 'const App = () => <div>Hello</div>;';
 
 describe('LivePreview - Viewport Sizes', () => {
   it('renders with 375px max-width when viewportSize is mobile', () => {
@@ -39,5 +41,37 @@ describe('LivePreview - Viewport Sizes', () => {
 
     const viewportInner = container.querySelector('.preview-viewport-inner');
     expect(viewportInner).toHaveStyle({ maxWidth: '100%' });
+  });
+});
+
+describe('LivePreview - Edge Cases', () => {
+  it('renders without error when code is empty string', () => {
+    const { container } = render(
+      <LivePreview code={emptyCode} />
+    );
+
+    const previewPanel = container.querySelector('.preview-panel');
+    expect(previewPanel).toBeInTheDocument();
+  });
+
+  it('renders error boundary structure to handle code without render() call', () => {
+    const { container } = render(
+      <LivePreview code={codeWithoutRender} />
+    );
+
+    const previewPanel = container.querySelector('.preview-panel');
+    expect(previewPanel).toBeInTheDocument();
+
+    const previewContent = container.querySelector('.preview-content');
+    expect(previewContent).toBeInTheDocument();
+  });
+
+  it('maintains viewport style even with empty code', () => {
+    const { container } = render(
+      <LivePreview code={emptyCode} viewportSize="tablet" />
+    );
+
+    const viewportInner = container.querySelector('.preview-viewport-inner');
+    expect(viewportInner).toHaveStyle({ maxWidth: '768px' });
   });
 });
