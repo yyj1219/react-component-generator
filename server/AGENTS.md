@@ -4,7 +4,7 @@
 
 ## Module Context
 
-This directory implements the API proxy server (Bun) that forwards requests to Anthropic Claude and Google Generative AI. It enforces API key management, rate limiting, and response formatting for the frontend.
+This directory contains the backend API server. The main server code is in `src/index.ts` and implements the API proxy (Bun) that forwards requests to Anthropic Claude and Google Generative AI. It enforces API key management, error handling, and response formatting for the frontend.
 
 ## Tech Stack & Constraints
 

@@ -10,7 +10,7 @@ All commands use Bun only (no npm, yarn, or pnpm).
 # Start development server + frontend (required for testing)
 bun run dev
 
-# Backend server only (watch mode)
+# Backend server only (watch mode, server/src/index.ts)
 bun run server
 
 # Build for production
