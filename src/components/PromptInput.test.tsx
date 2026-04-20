@@ -42,7 +42,7 @@ describe('PromptInput - isLoading 상태', () => {
     const onGenerate = vi.fn();
     render(<PromptInput onGenerate={onGenerate} isLoading={true} />);
 
-    const button = screen.getByRole('button');
+    const button = screen.getByRole('button', { name: /생성|생성 중/i });
     expect(button).toBeDisabled();
   });
 
@@ -50,7 +50,7 @@ describe('PromptInput - isLoading 상태', () => {
     const onGenerate = vi.fn();
     render(<PromptInput onGenerate={onGenerate} isLoading={true} />);
 
-    const button = screen.getByRole('button');
+    const button = screen.getByRole('button', { name: /생성 중/i });
     expect(button).toHaveTextContent('생성 중...');
   });
 
@@ -62,7 +62,7 @@ describe('PromptInput - isLoading 상태', () => {
     const textarea = screen.getByPlaceholderText('만들고 싶은 컴포넌트를 설명해주세요...');
     await user.type(textarea, 'valid prompt');
 
-    const button = screen.getByRole('button');
+    const button = screen.getByRole('button', { name: /생성 중/i });
     await user.click(button);
 
     expect(onGenerate).not.toHaveBeenCalled();

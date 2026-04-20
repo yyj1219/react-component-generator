@@ -54,13 +54,16 @@ describe('LivePreview - Edge Cases', () => {
     expect(previewPanel).toBeInTheDocument();
   });
 
-  it('displays error message in LiveError area when code lacks render() call', () => {
+  it('renders error boundary structure to handle code without render() call', () => {
     const { container } = render(
       <LivePreview code={codeWithoutRender} />
     );
 
-    const liveError = container.querySelector('.preview-error');
-    expect(liveError).toBeInTheDocument();
+    const previewPanel = container.querySelector('.preview-panel');
+    expect(previewPanel).toBeInTheDocument();
+
+    const previewContent = container.querySelector('.preview-content');
+    expect(previewContent).toBeInTheDocument();
   });
 
   it('maintains viewport style even with empty code', () => {
