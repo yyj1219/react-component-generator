@@ -11,6 +11,75 @@ const mockComponent: GeneratedComponent = {
   createdAt: new Date(),
 };
 
+describe('ComponentCard - Delete Button', () => {
+  it('calls onRemove with component id when delete button is clicked', async () => {
+    const user = userEvent.setup();
+    const onRemoveMock = vi.fn();
+    render(
+      <ComponentCard
+        component={mockComponent}
+        onRemove={onRemoveMock}
+        onRegenerate={vi.fn()}
+        isLoading={false}
+      />
+    );
+
+    const deleteBtn = screen.getByRole('button', { name: /삭제/ });
+    await user.click(deleteBtn);
+
+    expect(onRemoveMock).toHaveBeenCalledWith(mockComponent.id);
+  });
+});
+
+describe('ComponentCard - Regenerate Button', () => {
+  it('calls onRegenerate with component prompt when regenerate button is clicked', async () => {
+    const user = userEvent.setup();
+    const onRegenerateMock = vi.fn();
+    render(
+      <ComponentCard
+        component={mockComponent}
+        onRemove={vi.fn()}
+        onRegenerate={onRegenerateMock}
+        isLoading={false}
+      />
+    );
+
+    const regenerateBtn = screen.getByRole('button', { name: /재생성/ });
+    await user.click(regenerateBtn);
+
+    expect(onRegenerateMock).toHaveBeenCalledWith(mockComponent.prompt);
+  });
+});
+
+describe('ComponentCard - Loading State', () => {
+  it('disables regenerate button when isLoading is true', () => {
+    render(
+      <ComponentCard
+        component={mockComponent}
+        onRemove={vi.fn()}
+        onRegenerate={vi.fn()}
+        isLoading={true}
+      />
+    );
+
+    const regenerateBtn = screen.getByRole('button', { name: /생성 중/ });
+    expect(regenerateBtn).toBeDisabled();
+  });
+
+  it('changes regenerate button text to "생성 중..." when isLoading is true', () => {
+    render(
+      <ComponentCard
+        component={mockComponent}
+        onRemove={vi.fn()}
+        onRegenerate={vi.fn()}
+        isLoading={true}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /생성 중/ })).toBeInTheDocument();
+  });
+});
+
 describe('ComponentCard - Viewport Controls', () => {
   it('renders viewport buttons when preview tab is active', () => {
     render(

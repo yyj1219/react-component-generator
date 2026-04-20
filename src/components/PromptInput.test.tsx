@@ -1,65 +1,100 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PromptInput } from './PromptInput';
 
-describe('PromptInput - 글자 수 카운터', () => {
-  it('초기에 0 글자를 표시해야 한다', () => {
-    const handleGenerate = () => {};
-    render(<PromptInput onGenerate={handleGenerate} isLoading={false} />);
-
-    expect(screen.getByText('0 글자')).toBeInTheDocument();
-  });
-
-  it('textarea에 글자를 입력하면 카운터가 업데이트된다', async () => {
+describe('PromptInput - onGenerate 호출', () => {
+  it('프롬프트 입력 후 생성 버튼 클릭 시 onGenerate가 올바른 인자로 호출되어야 한다', async () => {
     const user = userEvent.setup();
-    const handleGenerate = () => {};
-    render(<PromptInput onGenerate={handleGenerate} isLoading={false} />);
+    const onGenerate = vi.fn();
+    render(<PromptInput onGenerate={onGenerate} isLoading={false} />);
 
     const textarea = screen.getByPlaceholderText('만들고 싶은 컴포넌트를 설명해주세요...');
-    await user.type(textarea, 'hello');
+    await user.type(textarea, 'test prompt');
 
-    expect(screen.getByText('5 글자')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: '컴포넌트 생성' });
+    await user.click(button);
+
+    expect(onGenerate).toHaveBeenCalledWith('test prompt');
+    expect(onGenerate).toHaveBeenCalledTimes(1);
   });
 
-  it('textarea를 비우면 0 글자로 돌아간다', async () => {
+  it('공백만 포함된 입력은 제출하지 않아야 한다', async () => {
     const user = userEvent.setup();
-    const handleGenerate = () => {};
-    render(<PromptInput onGenerate={handleGenerate} isLoading={false} />);
+    const onGenerate = vi.fn();
+    render(<PromptInput onGenerate={onGenerate} isLoading={false} />);
 
     const textarea = screen.getByPlaceholderText('만들고 싶은 컴포넌트를 설명해주세요...');
+    await user.type(textarea, '   ');
 
-    // 입력
-    await user.type(textarea, 'test');
-    expect(screen.getByText('4 글자')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: '컴포넌트 생성' });
+    // 버튼이 disabled 상태여야 함
+    expect(button).toBeDisabled();
 
-    // 전체 선택 후 삭제
-    await user.clear(textarea);
-    expect(screen.getByText('0 글자')).toBeInTheDocument();
+    // 시도해도 클릭이 작동하지 않음
+    await user.click(button);
+    expect(onGenerate).not.toHaveBeenCalled();
+  });
+});
+
+describe('PromptInput - isLoading 상태', () => {
+  it('isLoading={true}일 때 버튼이 disabled 상태여야 한다', () => {
+    const onGenerate = vi.fn();
+    render(<PromptInput onGenerate={onGenerate} isLoading={true} />);
+
+    const button = screen.getByRole('button');
+    expect(button).toBeDisabled();
   });
 
-  it('한글도 정확하게 계산한다', async () => {
+  it('isLoading={true}일 때 버튼 텍스트가 "생성 중..."으로 변경되어야 한다', () => {
+    const onGenerate = vi.fn();
+    render(<PromptInput onGenerate={onGenerate} isLoading={true} />);
+
+    const button = screen.getByRole('button');
+    expect(button).toHaveTextContent('생성 중...');
+  });
+
+  it('isLoading={true}일 때 유효한 프롬프트가 있어도 onGenerate가 호출되지 않아야 한다', async () => {
     const user = userEvent.setup();
-    const handleGenerate = () => {};
-    render(<PromptInput onGenerate={handleGenerate} isLoading={false} />);
+    const onGenerate = vi.fn();
+    render(<PromptInput onGenerate={onGenerate} isLoading={true} />);
 
     const textarea = screen.getByPlaceholderText('만들고 싶은 컴포넌트를 설명해주세요...');
-    await user.type(textarea, '안녕하세요');
+    await user.type(textarea, 'valid prompt');
 
-    expect(screen.getByText('5 글자')).toBeInTheDocument();
+    const button = screen.getByRole('button');
+    await user.click(button);
+
+    expect(onGenerate).not.toHaveBeenCalled();
+  });
+});
+
+describe('PromptInput - Ctrl+Enter 단축키', () => {
+  it('Ctrl+Enter 입력 시 onGenerate가 호출되어야 한다', async () => {
+    const user = userEvent.setup();
+    const onGenerate = vi.fn();
+    render(<PromptInput onGenerate={onGenerate} isLoading={false} />);
+
+    const textarea = screen.getByPlaceholderText('만들고 싶은 컴포넌트를 설명해주세요...');
+    await user.type(textarea, 'test prompt');
+
+    // Ctrl+Enter 시뮬레이션
+    await user.keyboard('{Control>}{Enter}{/Control}');
+
+    expect(onGenerate).toHaveBeenCalledWith('test prompt');
   });
 
-  it('예시를 클릭하면 카운터가 예시 글자 수로 업데이트된다', async () => {
+  it('Command+Enter(Mac) 입력 시 onGenerate가 호출되어야 한다', async () => {
     const user = userEvent.setup();
-    const handleGenerate = () => {};
-    render(<PromptInput onGenerate={handleGenerate} isLoading={false} />);
+    const onGenerate = vi.fn();
+    render(<PromptInput onGenerate={onGenerate} isLoading={false} />);
 
-    // 첫 번째 예시 버튼 클릭
-    const exampleButton = screen.getAllByRole('button', { name: /커서가 깜빡이며/ })[0];
-    await user.click(exampleButton);
+    const textarea = screen.getByPlaceholderText('만들고 싶은 컴포넌트를 설명해주세요...');
+    await user.type(textarea, 'test prompt');
 
-    // 예시 텍스트: '커서가 깜빡이며 한 글자씩 타이핑되는 애니메이션 텍스트. 여러 문장을 순환하며 반복'
-    // 글자 수: 46
-    expect(screen.getByText('46 글자')).toBeInTheDocument();
+    // Command+Enter 시뮬레이션 (Meta는 Command 키)
+    await user.keyboard('{Meta>}{Enter}{/Meta}');
+
+    expect(onGenerate).toHaveBeenCalledWith('test prompt');
   });
 });
