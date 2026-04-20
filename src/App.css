@@ -633,6 +633,51 @@
   font-weight: 700;
 }
 
+/* Viewport Controls */
+.viewport-controls {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 3px solid #2c1810;
+  background: #f5e6d3;
+}
+
+.viewport-btn {
+  padding: 0.3rem 0.8rem;
+  border: 2px solid #2c1810;
+  border-radius: 0;
+  background: white;
+  font-family: 'Courier Prime', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #2c1810;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #2c1810;
+  transition: all 0.1s;
+  text-transform: uppercase;
+}
+
+.viewport-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #2c1810;
+}
+
+.viewport-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #2c1810;
+}
+
+.viewport-btn--active {
+  background: #e74c3c;
+  color: white;
+}
+
+/* Preview Viewport */
+.preview-viewport-inner {
+  transition: max-width 0.3s ease;
+  overflow: hidden;
+}
+
 /* Code View */
 .btn-copy {
   padding: 0.4rem 0.8rem;

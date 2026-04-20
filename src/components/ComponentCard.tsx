@@ -11,10 +11,12 @@ interface ComponentCardProps {
 }
 
 type Tab = 'preview' | 'code';
+type ViewportSize = 'mobile' | 'tablet' | 'desktop';
 
 export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: ComponentCardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('preview');
   const [previewKey, setPreviewKey] = useState(0);
+  const [viewportSize, setViewportSize] = useState<ViewportSize>('desktop');
 
   return (
     <div className="component-card">
@@ -57,9 +59,22 @@ export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: 
           코드
         </button>
       </div>
+      {activeTab === 'preview' && (
+        <div className="viewport-controls">
+          {(['mobile', 'tablet', 'desktop'] as const).map(size => (
+            <button
+              key={size}
+              className={`viewport-btn${viewportSize === size ? ' viewport-btn--active' : ''}`}
+              onClick={() => setViewportSize(size)}
+            >
+              {size === 'mobile' ? '모바일' : size === 'tablet' ? '태블릿' : '데스크탑'}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="card-content">
         {activeTab === 'preview' ? (
-          <LivePreview key={previewKey} code={component.code} />
+          <LivePreview key={previewKey} code={component.code} viewportSize={viewportSize} />
         ) : (
           <CodeView code={component.code} />
         )}
