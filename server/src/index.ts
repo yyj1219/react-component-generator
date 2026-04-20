@@ -59,7 +59,11 @@ function resolveApiKey(provider: Provider, clientKey?: string): string | null {
   return clientKey || ENV_KEYS[provider] || null;
 }
 
-async function callAnthropic(prompt: string, apiKey: string): Promise<string> {
+async function callAnthropicStream(
+  prompt: string,
+  apiKey: string,
+  onChunk: (text: string) => void
+): Promise<void> {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -72,6 +76,7 @@ async function callAnthropic(prompt: string, apiKey: string): Promise<string> {
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: prompt }],
+      stream: true,
     }),
   });
 
@@ -79,19 +84,42 @@ async function callAnthropic(prompt: string, apiKey: string): Promise<string> {
     throw new Error(`Claude API error: ${response.status}`);
   }
 
-  const data = (await response.json()) as {
-    content: Array<{ type: string; text?: string }>;
-  };
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
 
-  return data.content
-    .filter((block) => block.type === 'text')
-    .map((block) => block.text)
-    .join('');
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      if (!raw) continue;
+
+      const event = JSON.parse(raw) as {
+        type: string;
+        delta?: { type: string; text?: string };
+      };
+
+      if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta' && event.delta?.text) {
+        onChunk(event.delta.text);
+      }
+    }
+  }
 }
 
-async function callGoogle(prompt: string, apiKey: string): Promise<string> {
+async function callGoogleStream(
+  prompt: string,
+  apiKey: string,
+  onChunk: (text: string) => void
+): Promise<void> {
   const model = 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -107,23 +135,43 @@ async function callGoogle(prompt: string, apiKey: string): Promise<string> {
     throw new Error(`Gemini API error: ${response.status}`);
   }
 
-  const data = (await response.json()) as {
-    candidates: Array<{
-      content: { parts: Array<{ text?: string }> };
-      finishReason?: string;
-    }>;
-  };
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
 
-  const candidate = data.candidates?.[0];
-  if (candidate?.finishReason === 'MAX_TOKENS') {
-    throw new Error('생성된 코드가 너무 길어 잘렸습니다. 더 간단한 컴포넌트를 요청해주세요.');
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+
+      try {
+        const data = JSON.parse(line) as {
+          candidates?: Array<{
+            content?: { parts?: Array<{ text?: string }> };
+            finishReason?: string;
+          }>;
+        };
+
+        const candidate = data.candidates?.[0];
+        if (candidate?.finishReason === 'MAX_TOKENS') {
+          throw new Error('생성된 코드가 너무 길어 잘렸습니다. 더 간단한 컴포넌트를 요청해주세요.');
+        }
+
+        const text = candidate?.content?.parts?.map((part) => part.text).join('') ?? '';
+        if (text) {
+          onChunk(text);
+        }
+      } catch (parseErr) {
+        console.warn('[Google Stream] Parse error:', parseErr instanceof Error ? parseErr.message : String(parseErr), 'line:', line.substring(0, 100));
+      }
+    }
   }
-
-  return (
-    candidate?.content?.parts
-      ?.map((part) => part.text)
-      ?.join('') ?? ''
-  );
 }
 
 function stripCodeFences(text: string): string {
@@ -188,14 +236,45 @@ const server = Bun.serve({
           );
         }
 
-        const text =
-          provider === 'google'
-            ? await callGoogle(prompt, resolvedKey)
-            : await callAnthropic(prompt, resolvedKey);
+        const stream = new ReadableStream({
+          async start(controller) {
+            const encoder = new TextEncoder();
+            let accumulatedText = '';
 
-        const code = ensureRenderCall(stripCodeFences(text));
+            const onChunk = (text: string) => {
+              accumulatedText += text;
+              const data = `data: ${JSON.stringify({ type: 'chunk', text })}\n\n`;
+              controller.enqueue(encoder.encode(data));
+            };
 
-        return Response.json({ code }, { headers: CORS_HEADERS });
+            try {
+              if (provider === 'google') {
+                await callGoogleStream(prompt, resolvedKey, onChunk);
+              } else {
+                await callAnthropicStream(prompt, resolvedKey, onChunk);
+              }
+
+              const finalCode = ensureRenderCall(stripCodeFences(accumulatedText));
+              const doneData = `data: ${JSON.stringify({ type: 'done', finalCode })}\n\n`;
+              controller.enqueue(encoder.encode(doneData));
+            } catch (err) {
+              const message = err instanceof Error ? err.message : 'Unknown error';
+              const errorData = `data: ${JSON.stringify({ type: 'error', message })}\n\n`;
+              controller.enqueue(encoder.encode(errorData));
+            } finally {
+              controller.close();
+            }
+          },
+        });
+
+        return new Response(stream, {
+          headers: {
+            ...CORS_HEADERS,
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          },
+        });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
 

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import type { GeneratedComponent } from '../types';
+import type { ComponentItem, GeneratedComponent } from '../types';
 import { LivePreview } from './LivePreview';
 import { CodeView } from './CodeView';
 
 interface ComponentCardProps {
-  component: GeneratedComponent;
+  component: ComponentItem;
   onRemove: (id: string) => void;
   onRegenerate: (prompt: string) => void;
   isLoading: boolean;
@@ -18,10 +18,31 @@ export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: 
   const [previewKey, setPreviewKey] = useState(0);
   const [viewportSize, setViewportSize] = useState<ViewportSize>('desktop');
 
+  const isStreaming = 'isStreaming' in component && component.isStreaming;
+
+  if (isStreaming) {
+    return (
+      <div className="component-card component-card--streaming">
+        <div className="card-header">
+          <p className="card-prompt">{component.prompt}</p>
+          <div className="streaming-indicator">
+            <span className="streaming-dot" />
+            생성 중...
+          </div>
+        </div>
+        <div className="card-content">
+          <CodeView code={component.streamingCode} />
+        </div>
+      </div>
+    );
+  }
+
+  const finished = component as GeneratedComponent;
+
   return (
     <div className="component-card">
       <div className="card-header">
-        <p className="card-prompt">{component.prompt}</p>
+        <p className="card-prompt">{finished.prompt}</p>
         <div className="card-actions">
           <button
             className="btn-refresh"
@@ -32,14 +53,14 @@ export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: 
           </button>
           <button
             className="btn-regenerate"
-            onClick={() => onRegenerate(component.prompt)}
+            onClick={() => onRegenerate(finished.prompt)}
             disabled={isLoading}
           >
             {isLoading ? '생성 중...' : '재생성'}
           </button>
           <button
             className="btn-remove"
-            onClick={() => onRemove(component.id)}
+            onClick={() => onRemove(finished.id)}
           >
             삭제
           </button>
@@ -74,9 +95,9 @@ export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: 
       )}
       <div className="card-content">
         {activeTab === 'preview' ? (
-          <LivePreview key={previewKey} code={component.code} viewportSize={viewportSize} />
+          <LivePreview key={previewKey} code={finished.code} viewportSize={viewportSize} />
         ) : (
-          <CodeView code={component.code} />
+          <CodeView code={finished.code} />
         )}
       </div>
     </div>

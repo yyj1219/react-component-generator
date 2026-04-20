@@ -727,6 +727,43 @@
   border-top: 2px solid #2c1810;
 }
 
+/* Streaming Card */
+.component-card--streaming {
+  opacity: 0.95;
+}
+
+.streaming-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Courier Prime', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ff6b35;
+  text-transform: uppercase;
+}
+
+.streaming-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 0;
+  background: #ff6b35;
+  border: 2px solid #2c1810;
+  animation: streamingPulse 1s ease-in-out infinite;
+}
+
+@keyframes streamingPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .app-header {

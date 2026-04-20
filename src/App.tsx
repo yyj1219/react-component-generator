@@ -111,18 +111,11 @@ function App() {
           </div>
         )}
 
-        {components.length === 0 && !isLoading && (
+        {components.length === 0 && (
           <div className="empty-state">
             <div className="empty-icon">&#9672;</div>
             <p>아직 생성된 컴포넌트가 없습니다.</p>
             <p>위에서 컴포넌트를 설명하고 생성 버튼을 눌러보세요!</p>
-          </div>
-        )}
-
-        {isLoading && (
-          <div className="loading-card">
-            <div className="loading-pulse" />
-            <p>컴포넌트를 생성하고 있습니다...</p>
           </div>
         )}
 
